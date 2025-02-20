@@ -1,51 +1,87 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { usePostStore } from '@/stores/postStore'
+import { useRouter } from 'vue-router'
 
 const postStore = usePostStore()
 const loading = ref(true)
 const showForm = ref(false)
+const editingPostId = ref<string | null>(null)
 const newTitle = ref('')
 const newDescription = ref('')
+const router = useRouter()
 
 onMounted(async () => {
-    await postStore.fetchPosts();
-    loading.value = false;
-});
+    await postStore.fetchPosts()
+    loading.value = false
+})
 
-const createPost = async () => {
-    if (!newTitle.value || !newDescription.value) return;
-    await postStore.createPost(newTitle.value, newDescription.value)
+const createOrUpdatePost = async () => {
+    if (!newTitle.value || newTitle.value.length > 12 || !newDescription.value || newDescription.value.length > 50) return
+
+    if (editingPostId.value) {
+        await postStore.updatePost(editingPostId.value, newTitle.value, newDescription.value)
+    } else {
+        await postStore.createPost(newTitle.value, newDescription.value)
+    }
+
     newTitle.value = ''
     newDescription.value = ''
+    editingPostId.value = null
     showForm.value = false
-};
+}
+
+const editPost = (post: { id: string, title: string, description: string }) => {
+    newTitle.value = post.title
+    newDescription.value = post.description
+    editingPostId.value = post.id
+    showForm.value = true
+}
+
+const deletePost = async (id: string) => {
+    await postStore.deletePost(id)
+}
+
+const goToPost = (id: string) => {
+    router.push({ name: 'post', params: { id } })
+}
 </script>
 
 <template>
     <div class="container mx-auto p-4">
         <h1 class="text-2xl font-bold mb-4 text-center">Блог</h1>
 
-        <button @click="showForm = !showForm"
+        <button @click="showForm = !showForm; editingPostId = null; newTitle = ''; newDescription = ''"
             class="bg-blue-500 text-white px-4 py-2 rounded-md mb-4 hover:bg-blue-600">
             {{ showForm ? 'Отменить' : 'Создать пост' }}
         </button>
 
         <div v-if="showForm" class="mb-4 p-4 border rounded-lg shadow-md">
-            <input v-model="newTitle" type="text" placeholder="Заголовок" class="w-full p-2 border rounded-md mb-2" />
-            <textarea v-model="newDescription" placeholder="Описание"
+            <input v-model="newTitle" type="text" placeholder="Заголовок (до 12 символов)"
+                class="w-full p-2 border rounded-md mb-2" />
+            <textarea v-model="newDescription" placeholder="Описание (до 50 символов)"
                 class="w-full p-2 border rounded-md mb-2"></textarea>
-            <button @click="createPost" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
-                Сохранить
+            <button @click="createOrUpdatePost" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+                :disabled="newTitle.length > 12 || newDescription.length > 50">
+                {{ editingPostId ? 'Сохранить изменения' : 'Сохранить' }}
             </button>
+            <p v-if="newTitle.length > 12" class="text-red-500 text-sm">Заголовок не должен превышать 12 символов.</p>
+            <p v-if="newDescription.length > 50" class="text-red-500 text-sm">Описание не должно превышать 50 символов.
+            </p>
         </div>
 
         <div v-if="loading" class="text-center text-gray-500">Загрузка...</div>
         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div v-for="post in postStore.posts" :key="post.id"
-                class="p-4 border rounded-lg shadow-md cursor-pointer hover:shadow-lg">
-                <h2 class="text-xl font-semibold">{{ post.title }}</h2>
-                <p class="text-gray-600">{{ post.description }}</p>
+                class="relative p-4 border rounded-lg shadow-md hover:shadow-lg hover:bg-gray-100">
+                <h2 class="text-xl font-semibold cursor-pointer" @click="goToPost(String(post.id))">{{ post.title }}
+                </h2>
+                <div class="absolute top-2 right-2 flex gap-2">
+                    <button @click="editPost(post)"
+                        class="bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600">✏️</button>
+                    <button @click="deletePost(post.id)"
+                        class="bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600">🗑️</button>
+                </div>
             </div>
         </div>
     </div>

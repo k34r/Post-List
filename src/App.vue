@@ -6,9 +6,9 @@ import { RouterLink, RouterView } from 'vue-router'
   <header>
 
     <nav>
-      <RouterLink to="/">Home</RouterLink>
-      <RouterLink to="/post">Post</RouterLink>
-      <RouterLink to="/form">Form</RouterLink>
+      <RouterLink to="/"></RouterLink>
+      <RouterLink to="/post"></RouterLink>
+      <!-- <RouterLink to="/form">Form</RouterLink> -->
     </nav>
 
   </header>

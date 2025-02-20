@@ -12,15 +12,15 @@ const router = createRouter({
       component: HomeView,
     },
     {
-      path: '/post',
+      path: '/post/:id',
       name: 'post',
       component: () => import('../pages/PostPage.vue'),
     },
-    {
-      path: '/form',
-      name: 'form',
-      component: () => import('../pages/FormPage.vue'),
-    },
+    // {
+    //   path: '/form',
+    //   name: 'form',
+    //   component: () => import('../pages/FormPage.vue'),
+    // },
   ],
 })
 
