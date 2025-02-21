@@ -82,10 +82,11 @@ const filteredPosts = computed(() => {
         </div>
 
         <div v-if="loading" class="text-center text-gray-500">Загрузка...</div>
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div v-else class="flex flex-col gap-4">
             <div v-for="post in filteredPosts" :key="post.id"
                 class="relative p-4 border rounded-lg shadow-md hover:shadow-lg hover:bg-gray-100">
-                <h2 class="text-xl font-semibold cursor-pointer" @click="goToPost(String(post.id))">{{ post.title }}
+                <h2 class="text-xl font-semibold cursor-pointer" @click="goToPost(String(post.id))">
+                    {{ post.title }}
                 </h2>
                 <div class="absolute top-2 right-2 flex gap-2">
                     <button @click="editPost(post)"
