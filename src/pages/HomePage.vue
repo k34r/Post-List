@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { usePostStore } from '@/stores/postStore'
 import { useRouter } from 'vue-router'
 
@@ -9,6 +9,7 @@ const showForm = ref(false)
 const editingPostId = ref<string | null>(null)
 const newTitle = ref('')
 const newDescription = ref('')
+const searchQuery = ref('')
 const router = useRouter()
 
 onMounted(async () => {
@@ -45,16 +46,26 @@ const deletePost = async (id: string) => {
 const goToPost = (id: string) => {
     router.push({ name: 'post', params: { id } })
 }
+
+const filteredPosts = computed(() => {
+    return postStore.posts.filter(post =>
+        post.title.toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
+})
 </script>
 
 <template>
     <div class="container mx-auto p-4">
         <h1 class="text-2xl font-bold mb-4 text-center">Блог</h1>
 
-        <button @click="showForm = !showForm; editingPostId = null; newTitle = ''; newDescription = ''"
-            class="bg-blue-500 text-white px-4 py-2 rounded-md mb-4 hover:bg-blue-600">
-            {{ showForm ? 'Отменить' : 'Создать пост' }}
-        </button>
+        <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <button @click="showForm = !showForm; editingPostId = null; newTitle = ''; newDescription = ''"
+                class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+                {{ showForm ? 'Отменить' : 'Создать пост' }}
+            </button>
+            <input v-model="searchQuery" type="text" placeholder="Поиск по заголовку"
+                class="w-full md:w-1/3 p-2 border rounded-md" />
+        </div>
 
         <div v-if="showForm" class="mb-4 p-4 border rounded-lg shadow-md">
             <input v-model="newTitle" type="text" placeholder="Заголовок (до 12 символов)"
@@ -72,7 +83,7 @@ const goToPost = (id: string) => {
 
         <div v-if="loading" class="text-center text-gray-500">Загрузка...</div>
         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div v-for="post in postStore.posts" :key="post.id"
+            <div v-for="post in filteredPosts" :key="post.id"
                 class="relative p-4 border rounded-lg shadow-md hover:shadow-lg hover:bg-gray-100">
                 <h2 class="text-xl font-semibold cursor-pointer" @click="goToPost(String(post.id))">{{ post.title }}
                 </h2>
