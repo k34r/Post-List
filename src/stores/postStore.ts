@@ -1,21 +1,37 @@
 import { defineStore } from 'pinia'
 import { db } from '@/firebase'
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore'
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  Timestamp
+} from 'firebase/firestore'
 
 export const usePostStore = defineStore('postStore', {
   state: () => ({
-    posts: [] as Array<{ id: string, title: string, description: string }>
+    posts: [] as Array<{ id: string; title: string; description: string; createdAt: string }>
   }),
+
   actions: {
     async fetchPosts() {
       try {
-        const querySnapshot = await getDocs(collection(db, "posts"))
+        const querySnapshot = await getDocs(collection(db, 'posts'))
         this.posts = querySnapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            title: doc.data().title,
-            description: doc.data().description,
-          }))
+          .map(doc => {
+            const data = doc.data()
+            return {
+              id: doc.id,
+              title: data.title,
+              description: data.description,
+              createdAt: data.createdAt instanceof Timestamp
+                ? data.createdAt.toDate().toISOString()
+                : '' // Если нет createdAt, подставляем пустую строку
+            }
+          })
           .filter(post => post.title && post.description)
       } catch (error) {
         console.error('Ошибка при загрузке постов:', error)
@@ -24,15 +40,17 @@ export const usePostStore = defineStore('postStore', {
 
     async createPost(title: string, description: string) {
       try {
-        const docRef = await addDoc(collection(db, "posts"), {
+        const docRef = await addDoc(collection(db, 'posts'), {
           title,
-          description
+          description,
+          createdAt: serverTimestamp() // Firestore сам установит время сервера
         })
 
         this.posts.push({
           id: docRef.id,
           title,
-          description
+          description,
+          createdAt: new Date().toISOString() // Отображаем текущую дату сразу
         })
       } catch (error) {
         console.error('Ошибка при создании поста:', error)
@@ -41,7 +59,7 @@ export const usePostStore = defineStore('postStore', {
 
     async updatePost(id: string, title: string, description: string) {
       try {
-        const postRef = doc(db, "posts", id)
+        const postRef = doc(db, 'posts', id)
         await updateDoc(postRef, { title, description })
 
         const index = this.posts.findIndex(post => post.id === id)
@@ -56,7 +74,7 @@ export const usePostStore = defineStore('postStore', {
 
     async deletePost(id: string) {
       try {
-        await deleteDoc(doc(db, "posts", id))
+        await deleteDoc(doc(db, 'posts', id))
         this.posts = this.posts.filter(post => post.id !== id)
       } catch (error) {
         console.error('Ошибка при удалении поста:', error)
@@ -64,5 +82,7 @@ export const usePostStore = defineStore('postStore', {
     }
   }
 })
+
+
 
 

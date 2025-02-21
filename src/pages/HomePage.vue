@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { usePostStore } from '@/stores/postStore'
 import { useRouter } from 'vue-router'
 
+
 const postStore = usePostStore()
 const loading = ref(true)
 const showForm = ref(false)
@@ -32,7 +33,7 @@ const createOrUpdatePost = async () => {
     showForm.value = false
 }
 
-const editPost = (post: { id: string, title: string, description: string }) => {
+const editPost = (post: { id: string, title: string, description: string, createdAt: string }) => {
     newTitle.value = post.title
     newDescription.value = post.description
     editingPostId.value = post.id
@@ -52,6 +53,17 @@ const filteredPosts = computed(() => {
         post.title.toLowerCase().includes(searchQuery.value.toLowerCase())
     )
 })
+
+// Функция для форматирования даты и времени
+const formatDate = (date: string) => {
+    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' }
+    const formattedDate = new Date(date).toLocaleDateString('ru-RU', options)
+
+    const timeOptions: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' }
+    const formattedTime = new Date(date).toLocaleTimeString('ru-RU', timeOptions)
+
+    return `${formattedDate}, ${formattedTime}`
+}
 </script>
 
 <template>
@@ -86,6 +98,7 @@ const filteredPosts = computed(() => {
             <div v-for="post in filteredPosts" :key="post.id"
                 class="relative p-4 border rounded-lg shadow-md hover:shadow-lg hover:bg-gray-100">
                 <h2 class="text-xl font-semibold cursor-pointer" @click="goToPost(String(post.id))">
+                    <span class="text-sm text-gray-500">{{ formatDate(post.createdAt) }} &nbsp;</span>
                     {{ post.title }}
                 </h2>
                 <div class="absolute top-2 right-2 flex gap-2">
