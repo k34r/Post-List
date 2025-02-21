@@ -1,87 +1,91 @@
+// store/postStore.ts
 import { defineStore } from 'pinia'
 import { db } from '@/firebase'
 import {
   collection,
   getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  serverTimestamp,
+  query,
+  orderBy,
+  limit,
+  startAfter,
   Timestamp
 } from 'firebase/firestore'
 
 export const usePostStore = defineStore('postStore', {
   state: () => ({
-    posts: [] as Array<{ id: string; title: string; description: string; createdAt: string }>
+    posts: [] as Array<{ id: string; title: string; description: string; createdAt: string }>,
+    lastVisible: null as any,
+    hasMore: true,
+    isLoading: false
   }),
 
   actions: {
     async fetchPosts() {
       try {
-        const querySnapshot = await getDocs(collection(db, 'posts'))
-        this.posts = querySnapshot.docs
-          .map(doc => {
+        this.isLoading = true
+        const firstQuery = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(10))
+        const querySnapshot = await getDocs(firstQuery)
+
+        if (!querySnapshot.empty) {
+          this.posts = querySnapshot.docs.map(doc => {
             const data = doc.data()
             return {
               id: doc.id,
               title: data.title,
               description: data.description,
-              createdAt: data.createdAt instanceof Timestamp
-                ? data.createdAt.toDate().toISOString()
-                : '' // Если нет createdAt, подставляем пустую строку
+              createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : ''
             }
           })
-          .filter(post => post.title && post.description)
-      } catch (error) {
-        console.error('Ошибка при загрузке постов:', error)
-      }
-    },
-
-    async createPost(title: string, description: string) {
-      try {
-        const docRef = await addDoc(collection(db, 'posts'), {
-          title,
-          description,
-          createdAt: serverTimestamp() // Firestore сам установит время сервера
-        })
-
-        this.posts.push({
-          id: docRef.id,
-          title,
-          description,
-          createdAt: new Date().toISOString() // Отображаем текущую дату сразу
-        })
-      } catch (error) {
-        console.error('Ошибка при создании поста:', error)
-      }
-    },
-
-    async updatePost(id: string, title: string, description: string) {
-      try {
-        const postRef = doc(db, 'posts', id)
-        await updateDoc(postRef, { title, description })
-
-        const index = this.posts.findIndex(post => post.id === id)
-        if (index !== -1) {
-          this.posts[index].title = title
-          this.posts[index].description = description
+          this.lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
+        } else {
+          this.hasMore = false
         }
       } catch (error) {
-        console.error('Ошибка при обновлении поста:', error)
+        console.error('Ошибка при загрузке постов:', error)
+      } finally {
+        this.isLoading = false
       }
     },
 
-    async deletePost(id: string) {
+    async loadMorePosts() {
+      if (!this.hasMore || !this.lastVisible || this.isLoading) return
+      
       try {
-        await deleteDoc(doc(db, 'posts', id))
-        this.posts = this.posts.filter(post => post.id !== id)
+        this.isLoading = true
+        const nextQuery = query(
+          collection(db, 'posts'),
+          orderBy('createdAt', 'desc'),
+          startAfter(this.lastVisible),
+          limit(5)
+        )
+        
+        const querySnapshot = await getDocs(nextQuery)
+        
+        if (!querySnapshot.empty) {
+          const newPosts = querySnapshot.docs.map(doc => {
+            const data = doc.data()
+            return {
+              id: doc.id,
+              title: data.title,
+              description: data.description,
+              createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : ''
+            }
+          })
+          this.posts.push(...newPosts)
+          this.lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
+        } else {
+          this.hasMore = false
+        }
       } catch (error) {
-        console.error('Ошибка при удалении поста:', error)
+        console.error('Ошибка при подгрузке постов:', error)
+      } finally {
+        this.isLoading = false
       }
     }
   }
 })
+
+
 
 
 
