@@ -10,23 +10,25 @@ import {
   Timestamp
 } from 'firebase/firestore'
 
+import type { OrderByDirection } from 'firebase/firestore'
+
 export const usePostStore = defineStore('postStore', {
   state: () => ({
     posts: [] as Array<{ id: string; title: string; description: string; createdAt: string }>,
     lastVisible: null as any,
     hasMore: true,
     isLoading: false,
-    searchQuery: ''
+    sortOrder: 'desc' as OrderByDirection, // По умолчанию сортировка по убыванию
+    searchQuery: '' as string // Для хранения текста поиска
   }),
 
   actions: {
-    // Функция для получения постов
     async fetchPosts() {
       try {
         this.isLoading = true
         const firstQuery = query(
           collection(db, 'posts'),
-          orderBy('createdAt', 'desc'),
+          orderBy('createdAt', this.sortOrder), // Используем текущий порядок сортировки
           limit(10)
         )
         const querySnapshot = await getDocs(firstQuery)
@@ -52,21 +54,20 @@ export const usePostStore = defineStore('postStore', {
       }
     },
 
-    // Функция для подгрузки дополнительных постов
     async loadMorePosts() {
       if (!this.hasMore || !this.lastVisible || this.isLoading) return
-
+      
       try {
         this.isLoading = true
         const nextQuery = query(
           collection(db, 'posts'),
-          orderBy('createdAt', 'desc'),
+          orderBy('createdAt', this.sortOrder),
           startAfter(this.lastVisible),
           limit(5)
         )
-
+        
         const querySnapshot = await getDocs(nextQuery)
-
+        
         if (!querySnapshot.empty) {
           const newPosts = querySnapshot.docs.map(doc => {
             const data = doc.data()
@@ -89,22 +90,30 @@ export const usePostStore = defineStore('postStore', {
       }
     },
 
-    // Поиск по заголовкам
+    // Метод для изменения порядка сортировки
+    changeSortOrder(order: OrderByDirection) {
+      this.sortOrder = order
+      this.fetchPosts()  // Пере-загружаем посты с новым порядком сортировки
+    },
+
+    // Метод для поиска постов
     searchPosts(query: string) {
       this.searchQuery = query
+      this.fetchPosts()  // Пере-загружаем посты с новым запросом
     }
   },
 
   getters: {
-    // Фильтрация постов по поисковому запросу
     filteredPosts(state) {
       if (!state.searchQuery) return state.posts
-      return state.posts.filter(post =>
+      return state.posts.filter(post => 
         post.title.toLowerCase().includes(state.searchQuery.toLowerCase())
       )
     }
   }
 })
+
+
 
 
 
