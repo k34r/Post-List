@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../pages/HomePage.vue'
-import PostPage from '../pages/PostPage.vue'
-import FormPage from '../pages/FormPage.vue'
+import HomePage from '../pages/HomePage.vue'
+
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -9,19 +8,17 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: HomeView,
+      component: HomePage,
     },
     {
       path: '/post/:id',
       name: 'post',
       component: () => import('../pages/PostPage.vue'),
-    },
-    // {
-    //   path: '/form',
-    //   name: 'form',
-    //   component: () => import('../pages/FormPage.vue'),
-    // },
+    }
   ],
 })
 
+// console.log("Маршруты загружены:", router.getRoutes())
+
 export default router
+
