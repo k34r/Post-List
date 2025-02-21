@@ -1,4 +1,3 @@
-// store/postStore.ts
 import { defineStore } from 'pinia'
 import { db } from '@/firebase'
 import {
@@ -16,14 +15,20 @@ export const usePostStore = defineStore('postStore', {
     posts: [] as Array<{ id: string; title: string; description: string; createdAt: string }>,
     lastVisible: null as any,
     hasMore: true,
-    isLoading: false
+    isLoading: false,
+    searchQuery: ''
   }),
 
   actions: {
+    // Функция для получения постов
     async fetchPosts() {
       try {
         this.isLoading = true
-        const firstQuery = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(10))
+        const firstQuery = query(
+          collection(db, 'posts'),
+          orderBy('createdAt', 'desc'),
+          limit(10)
+        )
         const querySnapshot = await getDocs(firstQuery)
 
         if (!querySnapshot.empty) {
@@ -47,9 +52,10 @@ export const usePostStore = defineStore('postStore', {
       }
     },
 
+    // Функция для подгрузки дополнительных постов
     async loadMorePosts() {
       if (!this.hasMore || !this.lastVisible || this.isLoading) return
-      
+
       try {
         this.isLoading = true
         const nextQuery = query(
@@ -58,9 +64,9 @@ export const usePostStore = defineStore('postStore', {
           startAfter(this.lastVisible),
           limit(5)
         )
-        
+
         const querySnapshot = await getDocs(nextQuery)
-        
+
         if (!querySnapshot.empty) {
           const newPosts = querySnapshot.docs.map(doc => {
             const data = doc.data()
@@ -81,9 +87,27 @@ export const usePostStore = defineStore('postStore', {
       } finally {
         this.isLoading = false
       }
+    },
+
+    // Поиск по заголовкам
+    searchPosts(query: string) {
+      this.searchQuery = query
+    }
+  },
+
+  getters: {
+    // Фильтрация постов по поисковому запросу
+    filteredPosts(state) {
+      if (!state.searchQuery) return state.posts
+      return state.posts.filter(post =>
+        post.title.toLowerCase().includes(state.searchQuery.toLowerCase())
+      )
     }
   }
 })
+
+
+
 
 
 

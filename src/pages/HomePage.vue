@@ -1,6 +1,8 @@
 <template>
     <div>
-        <div v-for="post in postStore.posts" :key="post.id" class="post-card">
+        <input v-model="searchQuery" @input="searchPosts" placeholder="Поиск по заголовку" />
+
+        <div v-for="post in postStore.filteredPosts" :key="post.id" class="post-card">
             <h2>{{ post.title }}</h2>
             <p>{{ post.description }}</p>
             <small>{{ new Date(post.createdAt).toLocaleString() }}</small>
@@ -11,10 +13,17 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { usePostStore } from '@/stores/postStore'
 
 const postStore = usePostStore()
+
+const searchQuery = ref('')
+
+// Поиск по заголовкам
+const searchPosts = () => {
+    postStore.searchPosts(searchQuery.value)
+}
 
 const handleScroll = () => {
     if (
