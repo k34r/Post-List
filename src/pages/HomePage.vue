@@ -11,6 +11,7 @@ const editingPostId = ref<string | null>(null)
 const newTitle = ref('')
 const newDescription = ref('')
 const searchQuery = ref('')
+const sortOrder = ref('newest') // Новая переменная для сортировки
 const router = useRouter()
 
 onMounted(async () => {
@@ -49,22 +50,31 @@ const goToPost = (id: string) => {
 }
 
 const filteredPosts = computed(() => {
-    return postStore.posts.filter(post =>
+    // Фильтрация по заголовку
+    const filtered = postStore.posts.filter(post =>
         post.title.toLowerCase().includes(searchQuery.value.toLowerCase())
     )
+
+    // Сортировка по дате
+    return filtered.sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime()
+        const dateB = new Date(b.createdAt).getTime()
+
+        if (sortOrder.value === 'newest') {
+            return dateB - dateA // Сначала новые
+        } else {
+            return dateA - dateB // Сначала старые
+        }
+    })
 })
 
-// Функция для форматирования даты и времени
+// Функция для форматирования даты
 const formatDate = (date: string) => {
     const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' }
-    const formattedDate = new Date(date).toLocaleDateString('ru-RU', options)
-
-    const timeOptions: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' }
-    const formattedTime = new Date(date).toLocaleTimeString('ru-RU', timeOptions)
-
-    return `${formattedDate}, ${formattedTime}`
+    return new Date(date).toLocaleDateString('ru-RU', options)
 }
 </script>
+
 
 <template>
     <div class="container mx-auto p-4">
@@ -77,6 +87,11 @@ const formatDate = (date: string) => {
             </button>
             <input v-model="searchQuery" type="text" placeholder="Поиск по заголовку"
                 class="w-full md:w-1/3 p-2 border rounded-md" />
+            <!-- Поле сортировки по дате -->
+            <select v-model="sortOrder" class="w-full md:w-1/3 p-2 border rounded-md">
+                <option value="newest">Сначала новые</option>
+                <option value="oldest">Сначала старые</option>
+            </select>
         </div>
 
         <div v-if="showForm" class="mb-4 p-4 border rounded-lg shadow-md">
@@ -98,7 +113,7 @@ const formatDate = (date: string) => {
             <div v-for="post in filteredPosts" :key="post.id"
                 class="relative p-4 border rounded-lg shadow-md hover:shadow-lg hover:bg-gray-100">
                 <h2 class="text-xl font-semibold cursor-pointer" @click="goToPost(String(post.id))">
-                    <span class="text-sm text-gray-500">{{ formatDate(post.createdAt) }} &nbsp;</span>
+                    <span class="text-sm text-gray-500">{{ formatDate(post.createdAt) }} - </span>
                     {{ post.title }}
                 </h2>
                 <div class="absolute top-2 right-2 flex gap-2">
