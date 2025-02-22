@@ -37,18 +37,24 @@ export const usePostStore = defineStore('postStore', {
       try {
         const q = query(
           collection(db, 'posts'),
-          orderBy('createdAt', this.sortOrder),
+          orderBy('createdAt', this.sortOrder), // Сортируем по дате и времени
           limit(10)
         )
         const querySnapshot = await getDocs(q)
 
         if (!querySnapshot.empty) {
-          this.posts = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            title: doc.data().title,
-            description: doc.data().description,
-            createdAt: doc.data().createdAt,
-          }))
+          this.posts = querySnapshot.docs.map(doc => {
+            const data = doc.data()
+            return {
+              id: doc.id,
+              title: data.title,
+              description: data.description,
+              createdAt: data.createdAt instanceof Timestamp
+                ? data.createdAt
+                : Timestamp.fromDate(new Date(data.createdAt))
+            }
+          }).sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis()) // Учитываем миллисекунды
+          
           this.lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
         }
         this.hasMore = querySnapshot.size > 0
@@ -67,8 +73,8 @@ export const usePostStore = defineStore('postStore', {
           createdAt: Timestamp.fromDate(new Date(post.createdAt)),
         }
         await setDoc(newPostRef, newPost)
-
         this.posts.unshift({ id: newPostRef.id, ...newPost })
+        this.posts.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis()) // Пересортировка
       } catch (error) {
         console.error('Ошибка при создании поста:', error)
       }
@@ -88,12 +94,20 @@ export const usePostStore = defineStore('postStore', {
         const querySnapshot = await getDocs(q)
 
         if (!querySnapshot.empty) {
-          this.posts.push(...querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            title: doc.data().title,
-            description: doc.data().description,
-            createdAt: doc.data().createdAt,
-          })))
+          const newPosts = querySnapshot.docs.map(doc => {
+            const data = doc.data()
+            return {
+              id: doc.id,
+              title: data.title,
+              description: data.description,
+              createdAt: data.createdAt instanceof Timestamp
+                ? data.createdAt
+                : Timestamp.fromDate(new Date(data.createdAt))
+            }
+          })
+
+          this.posts.push(...newPosts)
+          this.posts.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis()) // Пересортировка
           this.lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
         }
 
@@ -107,8 +121,7 @@ export const usePostStore = defineStore('postStore', {
 
     async deletePost(id: string) {
       try {
-        const postRef = doc(db, 'posts', id)
-        await deleteDoc(postRef)
+        await deleteDoc(doc(db, 'posts', id))
         this.posts = this.posts.filter(post => post.id !== id)
       } catch (error) {
         console.error('Ошибка при удалении поста:', error)
@@ -117,7 +130,11 @@ export const usePostStore = defineStore('postStore', {
 
     changeSortOrder(order: 'asc' | 'desc') {
       this.sortOrder = order
-      this.fetchPosts()
+      this.posts.sort((a, b) => 
+        order === 'asc'
+          ? a.createdAt.toMillis() - b.createdAt.toMillis()
+          : b.createdAt.toMillis() - a.createdAt.toMillis()
+      )
     },
 
     setSearchQuery(query: string) {
@@ -126,12 +143,7 @@ export const usePostStore = defineStore('postStore', {
 
     async editPost(id: string, updatedData: { title: string; description: string }) {
       try {
-        const postRef = doc(db, 'posts', id)
-        await updateDoc(postRef, {
-          title: updatedData.title,
-          description: updatedData.description,
-        })
-
+        await updateDoc(doc(db, 'posts', id), updatedData)
         const postIndex = this.posts.findIndex(post => post.id === id)
         if (postIndex !== -1) {
           this.posts[postIndex] = { ...this.posts[postIndex], ...updatedData }
@@ -154,6 +166,7 @@ export const usePostStore = defineStore('postStore', {
     }
   },
 })
+
 
 
 
