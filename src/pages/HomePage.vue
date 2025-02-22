@@ -53,6 +53,13 @@ const router = useRouter()
 const searchQuery = ref('') // Поисковый запрос
 const sortOrder = ref(postStore.sortOrder) // Порядок сортировки
 
+// Для хранения текста поста с валидацией по длине
+const postTitle = ref('') // Название поста
+const postDescription = ref('') // Описание поста
+
+const titleMaxLength = 12; // Максимальная длина заголовка
+const descriptionMaxLength = 50; // Максимальная длина описания для textarea
+
 // Фильтрация постов по заголовку
 const filteredPosts = computed(() => {
     return postStore.filteredPosts.filter(post =>
@@ -123,6 +130,7 @@ const formatDate = (date: string | { seconds: number }) => {
 onUnmounted(() => {
     window.removeEventListener('scroll', handleScroll)
 })
+
 </script>
 
 <style scoped>
@@ -138,5 +146,11 @@ onUnmounted(() => {
 h2:hover {
     cursor: pointer;
     text-decoration: underline;
+}
+
+/* Применим ограничение по длине для поля */
+input,
+textarea {
+    resize: none;
 }
 </style>

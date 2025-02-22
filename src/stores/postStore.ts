@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
 import { db } from '@/firebase'
-import { collection, query, orderBy, getDocs, startAfter, limit, doc, deleteDoc } from 'firebase/firestore'
+import { collection, query, orderBy, getDocs, startAfter, limit, doc, deleteDoc, updateDoc, setDoc } from 'firebase/firestore'
 
 interface Post {
   id: string
   title: string
   description: string
-  createdAt: string
+  createdAt: any // Изменить на timestamp, если Firestore использует тип timestamp
 }
 
 export const usePostStore = defineStore('postStore', {
@@ -100,6 +100,25 @@ export const usePostStore = defineStore('postStore', {
     // Фильтрация постов по поисковому запросу
     setSearchQuery(query: string) {
       this.searchQuery = query
+    },
+
+    // Обновление данных поста
+    async editPost(id: string, updatedData: { title: string; description: string }) {
+      try {
+        const postRef = doc(db, 'posts', id)
+        await updateDoc(postRef, {
+          title: updatedData.title,
+          description: updatedData.description
+        })
+
+        // Обновляем данные в локальном хранилище после изменения на сервере
+        const postIndex = this.posts.findIndex(post => post.id === id)
+        if (postIndex !== -1) {
+          this.posts[postIndex] = { ...this.posts[postIndex], ...updatedData }
+        }
+      } catch (error) {
+        console.error('Ошибка при редактировании поста:', error)
+      }
     }
   },
 
@@ -117,6 +136,7 @@ export const usePostStore = defineStore('postStore', {
     }
   },
 })
+
 
 
 
