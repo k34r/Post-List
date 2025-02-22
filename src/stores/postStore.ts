@@ -1,17 +1,29 @@
 import { defineStore } from 'pinia'
 import { db } from '@/firebase'
-import { collection, query, orderBy, getDocs, startAfter, limit, doc, deleteDoc, updateDoc, setDoc } from 'firebase/firestore'
+import {
+  collection,
+  query,
+  orderBy,
+  getDocs,
+  startAfter,
+  limit,
+  doc,
+  deleteDoc,
+  updateDoc,
+  setDoc,
+  Timestamp
+} from 'firebase/firestore'
 
 interface Post {
   id: string
   title: string
   description: string
-  createdAt: any // Изменить на timestamp, если Firestore использует тип timestamp
+  createdAt: Timestamp
 }
 
 export const usePostStore = defineStore('postStore', {
   state: () => ({
-    posts: [] as Post[], // Состояние с массивом постов
+    posts: [] as Post[],
     lastVisible: null as any,
     hasMore: true,
     isLoading: false,
@@ -20,7 +32,6 @@ export const usePostStore = defineStore('postStore', {
   }),
 
   actions: {
-    // Функция для загрузки постов
     async fetchPosts() {
       this.isLoading = true
       try {
@@ -36,7 +47,7 @@ export const usePostStore = defineStore('postStore', {
             id: doc.id,
             title: doc.data().title,
             description: doc.data().description,
-            createdAt: doc.data().createdAt
+            createdAt: doc.data().createdAt,
           }))
           this.lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
         }
@@ -50,17 +61,19 @@ export const usePostStore = defineStore('postStore', {
 
     async createPost(post: { title: string; description: string; createdAt: string }) {
       try {
-        const newPostRef = doc(collection(db, 'posts')) // Создание нового документа с авто-сгенерированным ID
-        await setDoc(newPostRef, post) // Запись данных в Firestore
-    
-        // Добавление поста в локальный массив
-        this.posts.unshift({ id: newPostRef.id, ...post })
+        const newPostRef = doc(collection(db, 'posts'))
+        const newPost = {
+          ...post,
+          createdAt: Timestamp.fromDate(new Date(post.createdAt)),
+        }
+        await setDoc(newPostRef, newPost)
+
+        this.posts.unshift({ id: newPostRef.id, ...newPost })
       } catch (error) {
         console.error('Ошибка при создании поста:', error)
       }
     },
 
-    // Функция для подгрузки дополнительных постов
     async loadMorePosts() {
       if (!this.lastVisible || this.isLoading || !this.hasMore) return
 
@@ -79,7 +92,7 @@ export const usePostStore = defineStore('postStore', {
             id: doc.id,
             title: doc.data().title,
             description: doc.data().description,
-            createdAt: doc.data().createdAt
+            createdAt: doc.data().createdAt,
           })))
           this.lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1]
         }
@@ -92,7 +105,6 @@ export const usePostStore = defineStore('postStore', {
       }
     },
 
-    // Удаление поста
     async deletePost(id: string) {
       try {
         const postRef = doc(db, 'posts', id)
@@ -103,27 +115,23 @@ export const usePostStore = defineStore('postStore', {
       }
     },
 
-    // Сортировка по дате
     changeSortOrder(order: 'asc' | 'desc') {
       this.sortOrder = order
-      this.fetchPosts() // Перезагружаем посты с новым порядком сортировки
+      this.fetchPosts()
     },
 
-    // Фильтрация постов по поисковому запросу
     setSearchQuery(query: string) {
       this.searchQuery = query
     },
 
-    // Обновление данных поста
     async editPost(id: string, updatedData: { title: string; description: string }) {
       try {
         const postRef = doc(db, 'posts', id)
         await updateDoc(postRef, {
           title: updatedData.title,
-          description: updatedData.description
+          description: updatedData.description,
         })
 
-        // Обновляем данные в локальном хранилище после изменения на сервере
         const postIndex = this.posts.findIndex(post => post.id === id)
         if (postIndex !== -1) {
           this.posts[postIndex] = { ...this.posts[postIndex], ...updatedData }
@@ -135,14 +143,12 @@ export const usePostStore = defineStore('postStore', {
   },
 
   getters: {
-    // Геттер для фильтрации постов по запросу
     filteredPosts(state): Post[] {
       return state.posts.filter(post =>
         post.title.toLowerCase().includes(state.searchQuery.toLowerCase())
       )
     },
 
-    // Геттер для всех постов
     getPosts(state): Post[] {
       return state.posts
     }

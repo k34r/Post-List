@@ -1,18 +1,3 @@
-<template>
-    <div class="container mx-auto p-4">
-        <button @click="$router.push('/')" class="bg-gray-500 text-white px-4 py-2 rounded-md mb-4 hover:bg-gray-600">
-            Назад
-        </button>
-
-        <div v-if="loading" class="text-center text-gray-500">Загрузка...</div>
-        <div v-else-if="post" class="p-4 border rounded-lg shadow-md">
-            <h1 class="text-2xl font-bold mb-2">{{ post.title }}</h1>
-            <p class="text-gray-600">{{ post.description }}</p>
-        </div>
-        <div v-else class="text-center text-red-500">Пост не найден</div>
-    </div>
-</template>
-
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
@@ -33,6 +18,21 @@ onMounted(async () => {
     loading.value = false
 })
 </script>
+
+<template>
+    <div class="container mx-auto p-4">
+        <button @click="$router.push('/')" class="bg-gray-500 text-white px-4 py-2 rounded-md mb-4 hover:bg-gray-600">
+            Назад
+        </button>
+
+        <div v-if="loading" class="text-center text-gray-500">Загрузка...</div>
+        <div v-else-if="post" class="p-4 border rounded-lg shadow-md">
+            <h1 class="text-2xl font-bold mb-2">{{ post.title }}</h1>
+            <p class="text-gray-600">{{ post.description }}</p>
+        </div>
+        <div v-else class="text-center text-red-500">Пост не найден</div>
+    </div>
+</template>
 
 <style scoped>
 .container {
