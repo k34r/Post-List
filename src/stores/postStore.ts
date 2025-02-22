@@ -48,6 +48,18 @@ export const usePostStore = defineStore('postStore', {
       }
     },
 
+    async createPost(post: { title: string; description: string; createdAt: string }) {
+      try {
+        const newPostRef = doc(collection(db, 'posts')) // Создание нового документа с авто-сгенерированным ID
+        await setDoc(newPostRef, post) // Запись данных в Firestore
+    
+        // Добавление поста в локальный массив
+        this.posts.unshift({ id: newPostRef.id, ...post })
+      } catch (error) {
+        console.error('Ошибка при создании поста:', error)
+      }
+    },
+
     // Функция для подгрузки дополнительных постов
     async loadMorePosts() {
       if (!this.lastVisible || this.isLoading || !this.hasMore) return
