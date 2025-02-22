@@ -1,24 +1,21 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomePage from '../pages/HomePage.vue'
+import HomePage from '@/pages/HomePage.vue'
+import PostPage from '@/pages/PostPage.vue'
+import EditPostPage from '@/pages/EditPostPage.vue'
+import CreatePostPage from '@/pages/CreatePostPage.vue'
 
+const routes = [
+  { path: '/', component: HomePage },
+  { path: '/post/:id', component: PostPage },
+  { path: '/post/:id/edit', component: EditPostPage },
+  { path: '/create-post', component: CreatePostPage },
+]
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: '/',
-      name: 'home',
-      component: HomePage,
-    },
-    {
-      path: '/post/:id',
-      name: 'post',
-      component: () => import('../pages/PostPage.vue'),
-    }
-  ],
+  history: createWebHistory(),
+  routes,
 })
 
-// console.log("Маршруты загружены:", router.getRoutes())
-
 export default router
+
 

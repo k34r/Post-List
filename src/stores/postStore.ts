@@ -7,7 +7,11 @@ import {
   orderBy,
   limit,
   startAfter,
-  Timestamp
+  deleteDoc,
+  doc,
+  Timestamp,
+  updateDoc,
+  addDoc
 } from 'firebase/firestore'
 
 import type { OrderByDirection } from 'firebase/firestore'
@@ -18,8 +22,8 @@ export const usePostStore = defineStore('postStore', {
     lastVisible: null as any,
     hasMore: true,
     isLoading: false,
-    sortOrder: 'desc' as OrderByDirection, // По умолчанию сортировка по убыванию
-    searchQuery: '' as string // Для хранения текста поиска
+    sortOrder: 'desc' as OrderByDirection,
+    searchQuery: '' as string
   }),
 
   actions: {
@@ -28,7 +32,7 @@ export const usePostStore = defineStore('postStore', {
         this.isLoading = true
         const firstQuery = query(
           collection(db, 'posts'),
-          orderBy('createdAt', this.sortOrder), // Используем текущий порядок сортировки
+          orderBy('createdAt', this.sortOrder),
           limit(10)
         )
         const querySnapshot = await getDocs(firstQuery)
@@ -90,16 +94,49 @@ export const usePostStore = defineStore('postStore', {
       }
     },
 
-    // Метод для изменения порядка сортировки
-    changeSortOrder(order: OrderByDirection) {
-      this.sortOrder = order
-      this.fetchPosts()  // Пере-загружаем посты с новым порядком сортировки
+    // Метод для создания нового поста и сохранения в Firestore
+    async createPost(post: { title: string; description: string; createdAt: string }) {
+      try {
+        const docRef = await addDoc(collection(db, 'posts'), {
+          title: post.title,
+          description: post.description,
+          createdAt: Timestamp.fromDate(new Date(post.createdAt)),
+        })
+
+        // После добавления поста можно обновить локальное состояние
+        this.posts.push({
+          id: docRef.id,  // Получаем id нового документа в Firebase
+          title: post.title,
+          description: post.description,
+          createdAt: post.createdAt,
+        })
+      } catch (error) {
+        console.error("Ошибка при создании поста:", error)
+      }
     },
 
-    // Метод для поиска постов
-    searchPosts(query: string) {
-      this.searchQuery = query
-      this.fetchPosts()  // Пере-загружаем посты с новым запросом
+    async deletePost(postId: string) {
+      try {
+        await deleteDoc(doc(db, 'posts', postId))
+        // Убираем удаленный пост из локального состояния
+        this.posts = this.posts.filter(post => post.id !== postId)
+      } catch (error) {
+        console.error('Ошибка при удалении поста:', error)
+      }
+    },
+
+    async editPost(postId: string, updatedData: { title: string; description: string }) {
+      try {
+        const postRef = doc(db, 'posts', postId)
+        await updateDoc(postRef, updatedData)
+        // Обновляем локальное состояние с новым значением
+        const postIndex = this.posts.findIndex(post => post.id === postId)
+        if (postIndex !== -1) {
+          this.posts[postIndex] = { ...this.posts[postIndex], ...updatedData }
+        }
+      } catch (error) {
+        console.error('Ошибка при редактировании поста:', error)
+      }
     }
   },
 
@@ -112,6 +149,7 @@ export const usePostStore = defineStore('postStore', {
     }
   }
 })
+
 
 
 
